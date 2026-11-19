@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Launch Radar</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="sweep" aria-hidden="true"><i></i></div>
+    <div>
+      <h1>Token Launch Radar</h1>
+      <p class="sub">Protocols whose token does not exist yet, ranked by what it could be worth · snapshot <span id="asof">—</span></p>
+    </div>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<section class="controls" aria-label="Board filters">
+  <input id="q" type="search" placeholder="Search name or slug…" autocomplete="off">
+  <select id="f-category" aria-label="Category"><option value="">All categories</option></select>
+  <select id="f-chain" aria-label="Chain"><option value="">All chains</option></select>
+  <select id="f-tier" aria-label="Tier">
+    <option value="">All tiers</option>
+    <option>Prime</option>
+    <option>Strong</option>
+    <option>Early</option>
+  </select>
+  <label class="check"><input type="checkbox" id="f-watch"> Watchlist only</label>
+  <span class="rowcount" id="rowcount"></span>
+</section>
+
+<details class="how">
+  <summary>How the value is derived</summary>
+  <div class="how-body">
+    <p>Every protocol on this board has users, TVL and a product — but no token. To price the token it
+    does not have, the radar looks sideways: inside the same snapshot, the protocols in each category
+    whose tokens <em>do</em> trade vote with their real market-cap/TVL ratio, and the category's multiple
+    is the median of those ratios. A pre-token protocol's implied value is its TVL times its category's
+    multiple, adjusted by a momentum factor from its 7-day TVL change (damped, capped) and a maturity
+    factor from how long it has been tracked (new protocols start at 0.80×, full weight at 900 days).</p>
+    <p>Read it honestly: an implied value is a claim about what a token <em>could</em> be worth if it
+    traded like its category's median token. It is not a prediction that a token launches, that it
+    launches soon, or that anyone is airdropped anything. It is a ranking device — a way to decide
+    which of 342 tokenless protocols deserve a wallet's time first.</p>
+    <div id="calib"></div>
+  </div>
+</details>
+
+<main class="layout">
+  <section class="board-wrap">
+    <table class="board" id="board">
+      <thead>
+        <tr>
+          <th class="num sortable" data-sort="rank">#</th>
+          <th class="sortable" data-sort="name">Protocol</th>
+          <th>Category</th>
+          <th>Chains</th>
+          <th class="num sortable" data-sort="tvl_usd">TVL</th>
+          <th class="num sortable" data-sort="change_7d">7d</th>
+          <th class="num sortable" data-sort="age_days">Age</th>
+          <th>Tier</th>
+          <th class="num sortable" data-sort="implied_value_usd">Implied value</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="empty" id="empty" hidden>No protocols match those filters.</p>
+  </section>
+  <aside class="detail" id="detail" hidden></aside>
+</main>
+
+<footer class="foot">
+  <p>Implied value is a calibration against tokenized peers in the same snapshot, not a forecast and not
+  financial advice. Farm plans are starting points: check a protocol's official channels before acting, and
+  never risk more than a position is worth to you.</p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
