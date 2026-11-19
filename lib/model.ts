@@ -64,6 +64,9 @@ export interface RadarRow {
   why: string;
 }
 
+/** Why a pre-token protocol was set aside as a product of an existing token rather than a launch candidate. */
+export type ExcludedReason = 'category' | 'name_word' | 'exchange_prefix' | 'version_marker';
+
 /** The full radar: the rows plus the meta the dashboard shows beside them. */
 export interface Radar {
   rows: RadarRow[];
@@ -72,6 +75,7 @@ export interface Radar {
     floor_usd: number;
     calibration: { global_multiple: number; global_peers: number; categories: CalibrationEntry[] };
     counts: { protocols: number; pre_token: number; tokenized: number; watchlist: number; watchlist_covered: number };
+    excluded_products: { total: number; by_reason: Record<ExcludedReason, number> };
   };
 }
 
@@ -112,6 +116,34 @@ export function parseSnapshot(text: string): Snapshot {
 /** A protocol has no token yet when the snapshot records neither a CoinGecko id nor a ticker. */
 export function isPreToken(p: Protocol): boolean {
   return p.gecko_id === null && p.symbol === null;
+}
+
+/** Categories that are products of another token by construction: bridges and staking wrappers. */
+const PRODUCT_CATEGORIES = new Set(['Bridge', 'Canonical Bridge', 'Liquid Staking', 'Liquid Restaking', 'Restaked BTC', 'CEX']);
+
+/** Exchanges whose own-name products (Binance Bitcoin, Coinbase Bridge, ...) are not launches. */
+const EXCHANGE_PREFIXES = ['Binance', 'Coinbase', 'Bybit', 'Kraken', 'Bitget', 'OKX', 'Bitfinex', 'Gemini'];
+
+/** A version marker at the end of a name: a successor of a protocol that already exists. */
+const VERSION_MARKER = /\s(V\d+(\.\d+)?|v\d+(\.\d+)?|\d+\.\d+)$/;
+
+/**
+ * The launch-candidate test, the same one the snapshot's watchlist definition uses: a protocol is
+ * a wrapped, staked or bridged product of a token that already trades — or a versioned successor
+ * of a protocol that already exists — when its category is a product category, its name carries
+ * the whole word "wrapped", "staked" or "staking", its name begins with an exchange's name, or its
+ * name ends in a version marker. Returns the first test it fails, or null for a genuine launch
+ * candidate. WBTC is Bitcoin on Ethereum: a token that exists, wearing a bridge — not a launch
+ * still to come, and pricing it as one would rank a wrapped product above every real candidate.
+ */
+export function excludedReason(p: Protocol): ExcludedReason | null {
+  if (p.category !== null && PRODUCT_CATEGORIES.has(p.category)) return 'category';
+  if (/\b(wrapped|staked|staking)\b/i.test(p.name)) return 'name_word';
+  for (const exchange of EXCHANGE_PREFIXES) {
+    if (p.name === exchange || p.name.startsWith(`${exchange} `)) return 'exchange_prefix';
+  }
+  if (VERSION_MARKER.test(p.name)) return 'version_marker';
+  return null;
 }
 
 function median(values: number[]): number {
@@ -335,7 +367,21 @@ export function buildRadar(snapshot: Snapshot): { board: RadarRow[]; radar: Rada
   const multipleByCategory = new Map(calibration.categories.map((e) => [e.category, e.multiple]));
   const watch = new Set(snapshot.watchlist);
 
-  const scored = snapshot.protocols.filter(isPreToken).map((p) => {
+  // Set aside the wrapped, staked and bridged products of tokens that already trade before
+  // ranking: however large their TVL, they are not launch candidates. The watchlist is never set
+  // aside — its own definition already excludes every one of these, and a watchlist slug stays.
+  const byReason: Record<ExcludedReason, number> = { category: 0, name_word: 0, exchange_prefix: 0, version_marker: 0 };
+  let excludedTotal = 0;
+  const candidates = snapshot.protocols.filter(isPreToken).filter((p) => {
+    if (watch.has(p.slug)) return true;
+    const reason = excludedReason(p);
+    if (reason === null) return true;
+    byReason[reason] += 1;
+    excludedTotal += 1;
+    return false;
+  });
+
+  const scored = candidates.map((p) => {
     const category = categoryOf(p);
     const ageDays = ageDaysOf(p.listed_at, snapshot.as_of);
     const multiple = multipleByCategory.get(category) ?? calibration.global_multiple;
@@ -394,6 +440,7 @@ export function buildRadar(snapshot: Snapshot): { board: RadarRow[]; radar: Rada
         watchlist: snapshot.watchlist.length,
         watchlist_covered: board.filter((r) => r.watchlist).length,
       },
+      excluded_products: { total: excludedTotal, by_reason: byReason },
     },
   };
   return { board, radar };

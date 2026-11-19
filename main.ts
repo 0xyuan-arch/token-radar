@@ -94,6 +94,8 @@ process.stdout.write(
   `token-radar: ${counts.protocols} protocols in the snapshot, ${counts.tokenized} tokenized peers calibrated ` +
     `(global median multiple ${calibration.global_multiple}x), ${board.length} pre-token protocols ranked, ` +
     `${counts.watchlist_covered}/${counts.watchlist} watchlist covered\n` +
+    `token-radar: ${board.length} launch candidates ranked; ${radar.meta.excluded_products.total} wrapped, staked or ` +
+    `bridged products set aside — they are not token launches\n` +
     `token-radar: wrote board.json (${board.length} rows), data.js, dashboard/ (${dashboardFiles.length} files), ` +
     `screenshots/ (${shotFiles.length} images) and dossier.json to ${outDir}\n`,
 );

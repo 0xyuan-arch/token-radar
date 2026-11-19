@@ -67,6 +67,15 @@
     var o = document.createElement('option'); o.value = c; o.textContent = c; els.chain.appendChild(o);
   });
 
+  /* set-aside note inside "How the value is derived": the products of existing tokens are not launches */
+  (function renderSetAside() {
+    var el = $('setaside');
+    var excluded = meta.excluded_products && meta.excluded_products.total;
+    if (!el || !excluded) return;
+    el.textContent = 'One separation is made before any ranking: wrapped, staked and bridged products of tokens ' +
+      'that already trade are set aside — they are not launches — and ' + excluded + ' of them are excluded from this board.';
+  })();
+
   /* calibration table inside "How the value is derived" */
   (function renderCalib() {
     var cal = meta.calibration || { categories: [] };
